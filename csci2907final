@@ -1,1 +1,47 @@
+# SCHEDULE TEMPLATE 
+# GW & LG
 
+import pulp as plp
+import itertools
+# number of games they should play
+x,y = 4,3
+teams = [i for i in range(1,11)]
+games = [i for i in range(4*x + 5*y)]
+
+matches = list(itertools.combinations(teams, 2))
+
+prob = plp.LpProblem("schedule", plp.LpMaximize)
+
+vars = prob.add_variable_dict("x", (matches, games), cat=plp.LpBinary)
+
+for a,b in matches :
+    con  = [vars[(a,b),k] for k in games]
+    #if a,b same division, x. else, y
+    if (a <= 5 and b <= 5) or (a > 5 and b > 5):
+        prob.addConstraint(plp.lpSum(con) == x)
+    else :
+        prob.addConstraint(plp.lpSum(con) == y)
+
+for i in teams :
+    for k in games :
+        con = 0
+        for j in range(1,i) :
+            con += vars[(j,i),k]
+        for j in range(i+1,11) :
+            con += vars[(i,j),k]
+        prob.addConstraint(con == 1)
+
+objective = 0
+for a,b in matches :
+    for k in games :
+        if (a <= 5 and b <= 5) or (a > 5 and b > 5) :
+            objective += 2**(k-1) * vars[(a,b), k]
+
+prob.setObjective(objective)
+
+prob.solve()
+
+for var in prob.variables() :
+    if var.varValue!=0:
+        print(var.name, "=", var.value())
+#print(prob)
